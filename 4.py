@@ -1,6 +1,8 @@
 import re
 import sys
 
+version1 = False
+
 EYE_COLORS = {"amb", "blu", "brn", "gry", "grn", "hzl", "oth"}
 
 def HEIGHT_HANDLING(v):
@@ -38,7 +40,9 @@ for e in entries:
         label, value = f[0], f[1]
         id, validate = EVL.get(label, (-1, lambda v: False))
 
-        if not validate(value) or validated[id] == True: #unexpected or wrong field or double entry
+        field_valid = (id != -1) if version1 else validate(value)
+
+        if not field_valid or validated[id] == True: #unexpected or wrong field or double entry
             invalid = True
             break
             
@@ -51,4 +55,3 @@ for e in entries:
             valid_passports += 1
         
 print(valid_passports)
-
