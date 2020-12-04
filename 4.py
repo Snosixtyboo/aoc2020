@@ -18,7 +18,7 @@ for e in lines.split("\n\n"):
     
     for f in e.split():
         factors = f.split(':')
-        id, func = EVL.get(factors[0], (0, lambda v : False))
+        id, func = EVL.get(factors[0], ('X', lambda v : False))
         try:
             valid[id] = True if version1 or func(factors[1]) else valid[id]
         except:
