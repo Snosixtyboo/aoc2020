@@ -8,13 +8,21 @@ import (
 	"strings"
 )
 
-var allSeats = 128 * 8
+const numBits = 10
+const allSeats = 128 * 8
 
 func array2Int(arr []int) (result int) {
 	for i := range arr {
 		result |= arr[i] << i
 	}
 	return
+}
+
+func countNumbersWithBitSet(num int, bit int) int {
+	bitNum := 1 << bit
+	m := num / bitNum
+	numsWithBit := (m/2)*bitNum + ((m % 2) * (num - m*bitNum))
+	return numsWithBit
 }
 
 func main() {
@@ -24,9 +32,9 @@ func main() {
 	bytes, _ := ioutil.ReadAll(os.Stdin)
 	lines := strings.Split(string(bytes), "\n")
 
-	var bitsRemaining [10]int
+	var bitsRemaining [numBits]int
 	for i := range bitsRemaining {
-		bitsRemaining[i] = allSeats / 2
+		bitsRemaining[i] = countNumbersWithBitSet(allSeats, i)
 	}
 
 	for _, line := range lines {
@@ -47,15 +55,9 @@ func main() {
 		}
 	}
 	// Fill in the bits for seats in rows that are not available on plane
-	for i := 0; i < allSeats; i++ {
-		if i == minID {
-			i = maxID + 1
-		}
-		for bit := 0; bit < 10; bit++ {
-			if i&(1<<bit) != 0 {
-				bitsRemaining[bit]--
-			}
-		}
+	for bit := 0; bit < numBits; bit++ {
+		bitsRemaining[bit] -= countNumbersWithBitSet(minID, bit)
+		bitsRemaining[bit] -= countNumbersWithBitSet(allSeats, bit) - countNumbersWithBitSet(maxID+1, bit)
 	}
 	// Find which one is actually mine by checking the only remaining bits
 	myID := array2Int(bitsRemaining[:])
