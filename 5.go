@@ -10,6 +10,13 @@ import (
 
 var allSeats = 128 * 8
 
+func array2Int(arr []int) (result int) {
+	for i := range arr {
+		result |= arr[i] << i
+	}
+	return
+}
+
 func main() {
 	maxID := 0
 	minID := math.MaxInt32
@@ -24,9 +31,10 @@ func main() {
 
 	for _, line := range lines {
 		id := 0
-		for i, code := range line {
+		bitString := strings.NewReplacer("F", "0", "B", "1", "L", "0", "R", "1").Replace(strings.TrimSpace(line))
+		for i, code := range bitString {
 			bit := (9 - i)
-			if code == 'B' || code == 'R' {
+			if code == '1' {
 				id |= 1 << bit
 				bitsRemaining[bit]--
 			}
@@ -50,12 +58,7 @@ func main() {
 		}
 	}
 	// Find which one is actually mine by checking the only remaining bits
-	myID := 0
-	for i := 0; i < 10; i++ {
-		if bitsRemaining[i] != 0 {
-			myID |= 1 << i
-		}
-	}
+	myID := array2Int(bitsRemaining[:])
 	fmt.Printf("The highest ID seen is %d\n", maxID)
 	fmt.Printf("My ID is %d\n", myID)
 }
