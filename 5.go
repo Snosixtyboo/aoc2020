@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -33,19 +34,18 @@ func main() {
 	lines := strings.Split(string(bytes), "\n")
 
 	var bitsRemaining [numBits]int
-	for i := range bitsRemaining {
-		bitsRemaining[i] = countNumbersWithBitSet(allSeats, i)
+	for bit := range bitsRemaining {
+		bitsRemaining[i] = countNumbersWithBitSet(allSeats, bit)
 	}
 
 	for _, line := range lines {
 		id := 0
-		bitString := strings.NewReplacer("F", "0", "B", "1", "L", "0", "R", "1").Replace(strings.TrimSpace(line))
-		for i, code := range bitString {
-			bit := (len(bitString) - 1 - i)
-			if code == '1' {
-				id |= 1 << bit
-				bitsRemaining[bit]--
-			}
+		reg, _ := regexp.Compile("B|R")
+		matches := reg.FindAllStringIndex(strings.TrimSpace(line), -1)
+		for _, pos := range matches {
+			bit := (numBits - 1 - pos[0])
+			id |= 1 << bit
+			bitsRemaining[bit]--
 		}
 		if id > maxID {
 			maxID = id
