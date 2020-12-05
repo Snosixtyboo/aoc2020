@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"math"
 	"os"
 	"regexp"
 	"strings"
@@ -12,31 +11,14 @@ import (
 const numBits = 10
 const allSeats = 128 * 8
 
-func array2Int(arr []int) (result int) {
-	for i := range arr {
-		result |= arr[i] << i
-	}
-	return
-}
-
-func countNumbersWithBitSet(num int, bit int) int {
-	bitNum := 1 << bit
-	m := num / bitNum
-	numsWithBit := (m/2)*bitNum + ((m % 2) * (num - m*bitNum))
-	return numsWithBit
-}
-
 func main() {
 	maxID := 0
-	minID := math.MaxInt32
+	myID := 0
 
 	bytes, _ := ioutil.ReadAll(os.Stdin)
 	lines := strings.Split(string(bytes), "\n")
 
-	var bitsRemaining [numBits]int
-	for bit := range bitsRemaining {
-		bitsRemaining[bit] = countNumbersWithBitSet(allSeats, bit)
-	}
+	var present [allSeats]bool
 
 	for _, line := range lines {
 		id := 0
@@ -45,22 +27,20 @@ func main() {
 		for _, pos := range matches {
 			bit := (numBits - 1 - pos[0])
 			id |= 1 << bit
-			bitsRemaining[bit]--
 		}
+		present[id] = true
 		if id > maxID {
 			maxID = id
 		}
-		if id < minID {
-			minID = id
+	}
+	for id, taken := range present {
+		if id > 0 && id < allSeats-1 {
+			if !taken && present[id-1] && present[id+1] {
+				myID = id
+				break
+			}
 		}
 	}
-	// Fill in the bits for seats in rows that are not available on plane
-	for bit := range bitsRemaining {
-		bitsRemaining[bit] -= countNumbersWithBitSet(minID, bit)
-		bitsRemaining[bit] -= countNumbersWithBitSet(allSeats, bit) - countNumbersWithBitSet(maxID+1, bit)
-	}
-	// Find which one is actually mine by checking the only remaining bits
-	myID := array2Int(bitsRemaining[:])
 	fmt.Printf("The highest ID seen is %d\n", maxID)
 	fmt.Printf("My ID is %d\n", myID)
 }
