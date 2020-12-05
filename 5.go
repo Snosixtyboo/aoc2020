@@ -35,7 +35,7 @@ func main() {
 
 	var bitsRemaining [numBits]int
 	for bit := range bitsRemaining {
-		bitsRemaining[i] = countNumbersWithBitSet(allSeats, bit)
+		bitsRemaining[bit] = countNumbersWithBitSet(allSeats, bit)
 	}
 
 	for _, line := range lines {
@@ -55,7 +55,7 @@ func main() {
 		}
 	}
 	// Fill in the bits for seats in rows that are not available on plane
-	for bit := 0; bit < numBits; bit++ {
+	for bit := range bitsRemaining {
 		bitsRemaining[bit] -= countNumbersWithBitSet(minID, bit)
 		bitsRemaining[bit] -= countNumbersWithBitSet(allSeats, bit) - countNumbersWithBitSet(maxID+1, bit)
 	}
