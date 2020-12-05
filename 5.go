@@ -33,7 +33,7 @@ func main() {
 		id := 0
 		bitString := strings.NewReplacer("F", "0", "B", "1", "L", "0", "R", "1").Replace(strings.TrimSpace(line))
 		for i, code := range bitString {
-			bit := (9 - i)
+			bit := (len(bitString) - 1 - i)
 			if code == '1' {
 				id |= 1 << bit
 				bitsRemaining[bit]--
