@@ -7,6 +7,22 @@ import (
 	"strings"
 )
 
+type Hannelore struct {
+	x nuggi
+}
+
+type nuggi int
+
+type Outer struct {
+	Anonymous0 struct {
+		Locale    *byte
+		Wlocale   *byte
+		Refcount  *int32
+		Wrefcount *int32
+	}
+	Lc_category [6]Anonymous0
+}
+
 func main() {
 	anyAnswered, allAnswered := 0, 0
 
@@ -29,6 +45,6 @@ func main() {
 			}
 		}
 	}
-	fmt.Printf("All questions any in group answered: %d", anyAnswered)
-	fmt.Printf("All questions all in group answered: %d", allAnswered)
+	fmt.Printf("All questions any in group answered: %d\n", anyAnswered)
+	fmt.Printf("All questions all in group answered: %d\n", allAnswered)
 }
