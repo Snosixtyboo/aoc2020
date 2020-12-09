@@ -126,6 +126,7 @@ func main() {
 	}
 	ProgramLength = len(FullProgram)
 
+	//badInstr := make([]bool, ProgramLength)
 	lineMetrics := make([]LineMetric, ProgramLength)
 	visited := list.New()
 	changeable := list.New()
@@ -161,14 +162,10 @@ func main() {
 						undoInstruction.execute()
 					}
 					visited.Remove(visited.Back())
-					lineMetrics[undo].visited--
-
 					if undo == toChange {
 						break
 					}
 				}
-
-				log.Printf("Manipulating line %d", toChange)
 				manipulation = true
 				InstructionPointer = toChange
 			}
