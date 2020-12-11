@@ -39,15 +39,11 @@ const (
 	uncertain  seatSituation = 1
 	vacant     seatSituation = 2
 	occupied   seatSituation = 4
-	willVacate seatSituation = 8
-	mayOccupy  seatSituation = 16
 )
 
 type seatInformation struct {
 	possibleNeighbors int
-	occupiedNeighbors int
 	state             seatSituation
-	updateState       seatSituation
 	neighbors         []coord
 }
 
