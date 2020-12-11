@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,9 +11,11 @@ import (
 
 func main() {
 	var version2 bool
+	var fileName string
 	flag.BoolVar(&version2, "v2", false, "Use solution for second task")
+	flag.StringVar(&fileName, "file", "data/in10.txt", "Input file to use")
 	flag.Parse()
-	bytes, _ := ioutil.ReadAll(os.Stdin)
+	bytes, _ := ioutil.ReadFile(fileName)
 	lines := strings.Split(string(bytes), "\n")
 	nums, possibleWays := make([]int64, len(lines)+1), make([]int64, len(lines)+2)
 	for i, line := range lines {
