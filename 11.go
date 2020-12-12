@@ -82,17 +82,18 @@ func main() {
 		for x := 0; x < width; x++ {
 			if code := lines[y][x]; code == '.' { // default is 'uncertain'. Change if floor
 				grid[y][x].state = floor
-			}
-			// Count all neighbor seats
-			visitNeighbors(width, height, coord{x, y}, func(origin coord, n coord) {
-				if neighborCode := lines[n.y][n.x]; neighborCode != '.' { // Detect neighbor seat
-					grid[origin.y][origin.x].numNeighbors++
-				}
-			})
+			} else {
+				// Count all neighbor seats for uncertain seats
+				visitNeighbors(width, height, coord{x, y}, func(origin coord, n coord) {
+					if neighborCode := lines[n.y][n.x]; neighborCode != '.' { // Detect neighbor seat
+						grid[origin.y][origin.x].numNeighbors++
+					}
+				})
 
-			if grid[y][x].state == uncertain && grid[y][x].numNeighbors < 4 { // Will definitely be occupied!
-				grid[y][x].state = occupied
-				changes = append(changes, coord{x, y})
+				if grid[y][x].numNeighbors < 4 { // Will definitely be occupied!
+					grid[y][x].state = occupied
+					changes = append(changes, coord{x, y})
+				}
 			}
 		}
 	}
