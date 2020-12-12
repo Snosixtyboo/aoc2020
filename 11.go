@@ -83,13 +83,12 @@ func main() {
 			if code := lines[y][x]; code == '.' { // default is 'uncertain'. Change if floor
 				grid[y][x].state = floor
 			}
-
-			countNeighbors := func(origin coord, n coord) {
+			// Count all neighbor seats
+			visitNeighbors(width, height, coord{x, y}, func(origin coord, n coord) {
 				if neighborCode := lines[n.y][n.x]; neighborCode != '.' { // Detect neighbor seat
 					grid[origin.y][origin.x].numNeighbors++
 				}
-			}
-			visitNeighbors(width, height, coord{x, y}, countNeighbors) // Count all neighbor seats
+			})
 
 			if grid[y][x].state == uncertain && grid[y][x].numNeighbors < 4 { // Will definitely be occupied!
 				grid[y][x].state = occupied
@@ -105,17 +104,16 @@ func main() {
 	// Update neighbors of previous permanent changes and record new permanent changes
 	for len(changes) > 0 {
 		for _, change := range changes {
-			findNewVacant := func(origin coord, n coord) {
+			visitNeighbors(width, height, change, func(origin coord, n coord) {
 				if grid[origin.y][origin.x].state == occupied && grid[n.y][n.x].state == uncertain {
 					grid[n.y][n.x].state = vacant
 					newChanges = append(newChanges, neighbor)
 				}
-			}
-			visitNeighbors(width, height, change, findNewVacant)
+			})
 		}
 
 		for _, change := range changes {
-			findNewOccupied := func(origin coord, n coord) {
+			visitNeighbors(width, height, change, func(origin coord, n coord) {
 				if grid[origin.y][origin.x].state == vacant && grid[n.y][n.x].state == uncertain {
 					grid[n.y][n.x].numNeighbors--
 
@@ -125,8 +123,7 @@ func main() {
 						totalOccupied++
 					}
 				}
-			}
-			visitNeighbors(width, height, change, findNewOccupied)
+			})
 		}
 
 		draw(width, height, grid)
