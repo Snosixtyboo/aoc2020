@@ -128,7 +128,7 @@ func main() {
 		}
 
 		draw(width, height, grid)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		changes, newChanges = newChanges, changes[:0]
 	}
 	fmt.Printf("Total occupied: %d\n", totalOccupied)
