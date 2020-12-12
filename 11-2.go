@@ -69,8 +69,6 @@ func main() {
 		grid[y] = gridMemory[y*width : (y+1)*width]
 	}
 
-	before := time.Now()
-
 	updaters := make([]coord, width*height)
 	numUpdaters := 0
 
@@ -200,12 +198,10 @@ func main() {
 				}
 			}
 		}
-		//draw(width, height, grid)
-		//time.Sleep(50 * time.Millisecond)
+		draw(width, height, grid)
+		time.Sleep(50 * time.Millisecond)
 		numUpdaters, nextNumUpdaters = nextNumUpdaters, numUpdaters
 		updaters, nextUpdaters = nextUpdaters, updaters
 	}
-
 	fmt.Printf("Total occupied: %d\n", totalOccupied)
-	fmt.Println(time.Since(before))
 }

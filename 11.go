@@ -10,7 +10,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-func draw(width, height int, grid [][]seatInformation) {
+func draw(width, height int, grid [][]seatInfo) {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	termbox.SetOutputMode(termbox.OutputNormal)
 	for y := 0; y < height; y++ {
@@ -32,23 +32,34 @@ func draw(width, height int, grid [][]seatInformation) {
 	termbox.Flush()
 }
 
-type seatSituation int
+type seatState int
 
 const (
-	floor      seatSituation = 0
-	uncertain  seatSituation = 1
-	vacant     seatSituation = 2
-	occupied   seatSituation = 4
+	uncertain seatState = 0
+	occupied  seatState = 1
+	vacant    seatState = 2
+	floor     seatState = 99
 )
 
-type seatInformation struct {
-	possibleNeighbors int
-	state             seatSituation
-	neighbors         []coord
+type seatInfo struct {
+	numNeighbors int
+	state        seatState
 }
 
 type coord struct {
 	x, y int
+}
+
+func visitNeighbors(width, height int, origin coord, job func(coord, coord)) {
+	for y := -1; y <= 1; y++ {
+		for x := -1; x <= 1; x++ {
+			neighborY := origin.y + y
+			neighborX := origin.x + x
+			if 0 <= neighborX && neighborX < width && 0 <= neighborY && neighborY < height && !(y == 0 && x == 0) {
+				job(origin, coord{neighborX, neighborY})
+			}
+		}
+	}
 }
 
 func main() {
@@ -56,84 +67,71 @@ func main() {
 	flag.StringVar(&fileName, "file", "data/in11.txt", "Input file to use")
 	flag.Parse()
 	bytes, _ := ioutil.ReadFile(fileName)
-	lines := strings.Split(string(bytes), "\n")
+	lines := strings.Split(string(bytes), "\n") // parse input
 
 	width, height := len(lines[0]), len(lines)
-	gridMemory := make([]seatInformation, width*height)
-	grid := make([][]seatInformation, height)
+	gridMemory := make([]seatInfo, width*height)
+	grid := make([][]seatInfo, height)
 	for y := 0; y < height; y++ {
-		grid[y] = gridMemory[y*width : (y+1)*width]
+		grid[y] = gridMemory[y*width : (y+1)*width] // create 2D grid from linear memory
 	}
 
-	updaters, nextUpdaters := make([]coord, width*height), make([]coord, width*height)
-	numUpdaters, nextNumUpdaters := 0, 0
-	totalOccupied := 0
+	changes, newChanges := make([]coord, 0, width*height), make([]coord, 0, width*height)
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			for ny := -1; ny < 2; ny++ {
-				for nx := -1; nx < 2; nx++ {
-					testY := y + ny
-					testX := x + nx
-					if 0 <= testY && testY < height && 0 <= testX && testX < width {
-						seatCode := lines[testY][testX]
-						var seat seatSituation
-						switch seatCode {
-						case '.':
-							seat = floor
-						case 'L':
-							seat = uncertain
-						}
-						if ny == 0 && nx == 0 {
-							grid[y][x].state = seat
-						} else if seat == uncertain {
-							grid[y][x].neighbors = append(grid[y][x].neighbors, coord{testX, testY})
-							grid[y][x].possibleNeighbors++
-						}
-					}
+			if code := lines[y][x]; code == '.' { // default is 'uncertain'. Change if floor
+				grid[y][x].state = floor
+			}
+
+			countNeighbors := func(origin coord, n coord) {
+				if neighborCode := lines[n.y][n.x]; neighborCode != '.' { // Detect neighbor seat
+					grid[origin.y][origin.x].numNeighbors++
 				}
 			}
-			updaters[numUpdaters] = coord{x, y}
-			numUpdaters++
+			visitNeighbors(width, height, coord{x, y}, countNeighbors) // Count all neighbor seats
+
+			if grid[y][x].state == uncertain && grid[y][x].numNeighbors < 4 { // Will definitely be occupied!
+				grid[y][x].state = occupied
+				changes = append(changes, coord{x, y})
+			}
 		}
 	}
 
-	termbox.Init()
+	totalOccupied := len(changes) // Count initially occupied
 
-	for numUpdaters > 0 {
-		nextNumUpdaters = 0
-		for i := 0; i < numUpdaters; i++ {
-			y, x := updaters[i].y, updaters[i].x
-			if grid[y][x].state == occupied {
-				for _, n := range grid[y][x].neighbors {
-					if grid[n.y][n.x].state == uncertain {
-						grid[n.y][n.x].state = vacant
-						nextUpdaters[nextNumUpdaters] = n
-						nextNumUpdaters++
-					}
+	termbox.Init()
+	// Only iterate over PERMANENT state changes. Keep going until nothing has changed anymore.
+	// Update neighbors of previous permanent changes and record new permanent changes
+	for len(changes) > 0 {
+		for _, change := range changes {
+			findNewVacant := func(origin coord, n coord) {
+				if grid[origin.y][origin.x].state == occupied && grid[n.y][n.x].state == uncertain {
+					grid[n.y][n.x].state = vacant
+					newChanges = append(newChanges, neighbor)
 				}
 			}
+			visitNeighbors(width, height, change, findNewVacant)
 		}
-		for i := 0; i < numUpdaters; i++ {
-			y, x := updaters[i].y, updaters[i].x
-			for _, n := range grid[y][x].neighbors {
-				if grid[n.y][n.x].state == uncertain {
-					if grid[y][x].state == vacant {
-						grid[n.y][n.x].possibleNeighbors--
-					}
-					if grid[n.y][n.x].possibleNeighbors < 4 {
+
+		for _, change := range changes {
+			findNewOccupied := func(origin coord, n coord) {
+				if grid[origin.y][origin.x].state == vacant && grid[n.y][n.x].state == uncertain {
+					grid[n.y][n.x].numNeighbors--
+
+					if grid[n.y][n.x].numNeighbors < 4 {
 						grid[n.y][n.x].state = occupied
-						nextUpdaters[nextNumUpdaters] = n
-						nextNumUpdaters++
+						newChanges = append(newChanges, n)
 						totalOccupied++
 					}
 				}
 			}
+			visitNeighbors(width, height, change, findNewOccupied)
 		}
+
 		draw(width, height, grid)
 		time.Sleep(50 * time.Millisecond)
-		numUpdaters, nextNumUpdaters = nextNumUpdaters, numUpdaters
-		updaters, nextUpdaters = nextUpdaters, updaters
+		changes, newChanges = newChanges, changes[:0]
 	}
 	fmt.Printf("Total occupied: %d\n", totalOccupied)
 }
