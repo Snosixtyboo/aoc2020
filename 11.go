@@ -35,10 +35,10 @@ func draw(width, height int, grid [][]seatInfo) {
 type seatState int
 
 const (
-	uncertain seatState = 0
-	occupied  seatState = 1
-	vacant    seatState = 2
-	floor     seatState = 99
+	floor     seatState = 0
+	uncertain seatState = 1
+	occupied  seatState = 2
+	vacant    seatState = 3
 )
 
 type seatInfo struct {
@@ -80,9 +80,9 @@ func main() {
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			if code := lines[y][x]; code == '.' { // default is 'uncertain'. Change if floor
-				grid[y][x].state = floor
-			} else {
+			if code := lines[y][x]; code == 'L' { // Default is floor
+				grid[y][x].state = uncertain
+
 				// Count all neighbor seats for uncertain seats
 				visitNeighbors(width, height, coord{x, y}, func(origin coord, n coord) {
 					if neighborCode := lines[n.y][n.x]; neighborCode != '.' { // Detect neighbor seat
