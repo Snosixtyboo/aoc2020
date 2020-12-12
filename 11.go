@@ -85,7 +85,7 @@ func main() {
 
 				// Count all neighbor seats for uncertain seats
 				visitNeighbors(width, height, coord{x, y}, func(origin coord, n coord) {
-					if neighborCode := lines[n.y][n.x]; neighborCode != '.' { // Detect neighbor seat
+					if neighborCode := lines[n.y][n.x]; neighborCode == 'L' { // Detect neighbor seat
 						grid[origin.y][origin.x].numNeighbors++
 					}
 				})
