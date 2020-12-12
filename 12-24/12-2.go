@@ -38,13 +38,13 @@ func main() {
 		case 'W':
 			wayPos.x -= commandValue
 		case 'L':
-			oldPos, quarterTurns, halfTurns := wayPos, commandValue/90, commandValue/180
-			wayPos.x = ((quarterTurns+1)%2)*oldPos.x*(-2*(halfTurns%2)+1) + (quarterTurns%2)*oldPos.y*(2*(halfTurns%2)-1)
-			wayPos.y = ((quarterTurns+1)%2)*oldPos.y*(-2*(halfTurns%2)+1) + (quarterTurns%2)*oldPos.x*(-2*(halfTurns%2)+1)
+			oldPos, qtTOdd, hemi := wayPos, (commandValue/90)%2, -2*((commandValue/180)%2)+1
+			wayPos.x = (1-qtTOdd)*oldPos.x*(hemi) + qtTOdd*oldPos.y*(-hemi)
+			wayPos.y = (1-qtTOdd)*oldPos.y*(hemi) + qtTOdd*oldPos.x*(hemi)
 		case 'R':
-			oldPos, quarterTurns, halfTurns := wayPos, commandValue/90, commandValue/180
-			wayPos.x = ((quarterTurns+1)%2)*oldPos.x*(-2*(halfTurns%2)+1) + (quarterTurns%2)*oldPos.y*(-2*(halfTurns%2)+1)
-			wayPos.y = ((quarterTurns+1)%2)*oldPos.y*(-2*(halfTurns%2)+1) + (quarterTurns%2)*oldPos.x*(2*(halfTurns%2)-1)
+			oldPos, qtTOdd, hemi := wayPos, (commandValue/90)%2, -2*((commandValue/180)%2)+1
+			wayPos.x = (1-qtTOdd)*oldPos.x*(hemi) + qtTOdd*oldPos.y*(hemi)
+			wayPos.y = (1-qtTOdd)*oldPos.y*(hemi) + qtTOdd*oldPos.x*(-hemi)
 		case 'F':
 			shipPos.x += commandValue * wayPos.x
 			shipPos.y += commandValue * wayPos.y
