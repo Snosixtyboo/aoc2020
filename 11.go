@@ -107,7 +107,7 @@ func main() {
 			visitNeighbors(width, height, change, func(origin coord, n coord) {
 				if grid[origin.y][origin.x].state == occupied && grid[n.y][n.x].state == uncertain {
 					grid[n.y][n.x].state = vacant
-					newChanges = append(newChanges, neighbor)
+					newChanges = append(newChanges, n)
 				}
 			})
 		}
