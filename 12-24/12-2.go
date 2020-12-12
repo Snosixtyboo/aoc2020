@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 )
 
-type Coord struct {
+type Coord struct { // Helper coord struct
 	x, y int
 }
 
