@@ -63,11 +63,13 @@ func main() {
 	for _, line := range lines {
 		rd := strings.NewReader(line)
 
-		var instr, valStr string
-		fmt.Fscanf(rd, "%s = %s", &instr, &valStr)
+		var instrStr, valStr string
+		fmt.Fscanf(rd, "%s = %s", &instrStr, &valStr)
+		instr := regexp.MustCompile("[a-zA-Z]+").FindString(instrStr)
 
-		if strings.HasPrefix(instr, "mem") {
-			addr, _ := strconv.ParseUint(instr[4:len(instr)-1], 0, 64)
+		switch instr {
+		case "mem":
+			addr, _ := strconv.ParseUint(instrStr[4:len(instrStr)-1], 0, 64)
 			val, _ := strconv.ParseUint(valStr, 0, 64)
 			if version2 {
 				addr = (addr | maskOne)
@@ -78,11 +80,11 @@ func main() {
 				val = (val | maskOne) & maskZero
 				memory[addr] = val
 			}
-		} else if strings.HasPrefix(instr, "mask") {
+		case "mask":
 			xLocations = regexp.MustCompile("X").FindAllStringIndex(valStr, -1)
 			maskOne, _ = strconv.ParseUint(strings.ReplaceAll(valStr, "X", "0"), 2, 64)
 			maskZero, _ = strconv.ParseUint(strings.ReplaceAll(valStr, "X", "1"), 2, 64)
-		} else {
+		default:
 			log.Fatalf("Unknown instruction!")
 		}
 	}
