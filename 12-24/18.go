@@ -19,8 +19,7 @@ func closeLayer(N *int, values []int, ops []byte) {
 	*N = *N - 1
 }
 
-func applyOp(op byte, a int, b int) int {
-	res := 0
+func applyOp(op byte, a int, b int) (res int) {
 	switch op {
 	case '+':
 		res = a + b
@@ -29,7 +28,7 @@ func applyOp(op byte, a int, b int) int {
 	default:
 		log.Fatalf("Unexpected operator: %d", op)
 	}
-	return res
+	return
 }
 
 const STACKSIZE = 100
