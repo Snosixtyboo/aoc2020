@@ -32,51 +32,37 @@ func createRule(id2Rule map[int]Rule, id int) {
 		} else if _, err := fmt.Fscanf(rd, "%s", &text); err == nil {
 			updatedRule.options[currOption] = append(updatedRule.options[currOption], -1)
 		} else {
-			fmt.Println(updatedRule.raw)
+			fmt.Println("Unknown token ", updatedRule.raw)
 		}
 	}
 	id2Rule[id] = updatedRule
 }
 
-func expandToFit(t byte, id2Rule map[int]Rule, id int, path []int, nextExpansions *[][]int, last bool) {
+func verify(id2Rule map[int]Rule, text []byte, stack []int, depth int) bool {
+	if len(stack) == 0 {
+		return false
+	}
 
-	rule := id2Rule[id]
+	ruleID := stack[0]
+	stack = stack[1:]
+	rule := id2Rule[ruleID]
 
 	if len(rule.options) == 1 && rule.options[0][0] == -1 {
-		if rule.raw == string(t) {
-			if last {
-				path = append(path, -1)
+		if strings.HasPrefix(string(text), rule.raw) {
+			text = text[len(rule.raw):]
+			if len(stack) == 0 && len(text) == 0 { // perfect parsed
+				return true
 			}
-			*nextExpansions = append(*nextExpansions, path)
+			return verify(id2Rule, text, stack, depth+1)
 		}
-		return
+		return false
 	}
 
-	for _, option := range rule.options {
-		newPath := make([]int, len(option[1:]))
-		copy(newPath, option[1:])
-		newPath = append(newPath, path...)
-		expandToFit(t, id2Rule, option[0], newPath, nextExpansions, last)
-	}
-}
-
-func verify(id2Rule map[int]Rule, text []byte) bool {
-	expansions := make([][]int, len(id2Rule[0].options))
-	copy(expansions, id2Rule[0].options)
-	var nextExpansions [][]int
-
-	for i := 0; i < len(text); i++ {
-		for _, exp := range expansions {
-			if len(exp) == 0 {
-				continue
-			}
-			expandToFit(text[i], id2Rule, exp[0], exp[1:], &nextExpansions, i == len(text)-1)
-		}
-		expansions, nextExpansions = nextExpansions, expansions[0:0]
-	}
-
-	for _, exp := range expansions {
-		if len(exp) == 1 && exp[0] == -1 {
+	for _, opt := range rule.options {
+		newStack := make([]int, len(opt))
+		copy(newStack, opt)
+		newStack = append(newStack, stack...)
+		if verify(id2Rule, text, newStack, depth+1) {
 			return true
 		}
 	}
@@ -109,8 +95,9 @@ func main() {
 	}
 
 	allMatched := 0
-	for _, line := range lines {
-		if len(line) > 0 && verify(id2Rule, []byte(line)) {
+	for ; l < len(lines); l++ {
+		line := lines[l]
+		if len(line) > 0 && verify(id2Rule, []byte(line), id2Rule[0].options[0], 0) {
 			allMatched++
 		}
 	}
