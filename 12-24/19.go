@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
+	"time"
 )
 
 type Rule struct {
@@ -38,10 +39,9 @@ func createRule(id2Rule map[int]Rule, id int) {
 	id2Rule[id] = updatedRule
 }
 
-func verify(id2Rule map[int]Rule, text []byte, stack []int, upLink chan<- bool, depth int) {
+func verify(id2Rule map[int]Rule, text []byte, stack []int, depth int) bool {
 	if len(stack) == 0 {
-		upLink <- false
-		return
+		return false
 	}
 
 	ruleID := stack[0]
@@ -52,31 +52,22 @@ func verify(id2Rule map[int]Rule, text []byte, stack []int, upLink chan<- bool, 
 		if strings.HasPrefix(string(text), rule.raw) {
 			text = text[len(rule.raw):]
 			if len(stack) == 0 && len(text) == 0 { // perfect parsed
-				upLink <- true
-				return
+				return true
 			}
-			verify(id2Rule, text, stack, upLink, depth+1)
-			return
+			return verify(id2Rule, text, stack, depth+1)
 		}
-		upLink <- false
-		return
+		return false
 	}
 
-	downLink := make(chan bool)
 	for _, opt := range rule.options {
 		newStack := make([]int, len(opt))
 		copy(newStack, opt)
 		newStack = append(newStack, stack...)
-		go verify(id2Rule, text, newStack, downLink, depth+1)
-	}
-
-	result := false
-	for range rule.options {
-		if <-downLink {
-			result = true
+		if verify(id2Rule, text, newStack, depth+1) {
+			return true
 		}
 	}
-	upLink <- result
+	return false
 }
 
 func main() {
@@ -95,6 +86,7 @@ func main() {
 	var l, id int
 	var raw string
 
+	before := time.Now()
 	id2Rule := make(map[int]Rule)
 	for l = 0; l < len(lines) && lines[l] != ""; l++ {
 		rd := bufio.NewReader(strings.NewReader(lines[l]))
@@ -108,12 +100,11 @@ func main() {
 	for ; l < len(lines); l++ {
 		line := lines[l]
 		if len(line) > 0 {
-			topChannel := make(chan bool, 1)
-			verify(id2Rule, []byte(line), id2Rule[0].options[0], topChannel, 0)
-			if <-topChannel {
+			if verify(id2Rule, []byte(line), id2Rule[0].options[0], 0) {
 				allMatched++
 			}
 		}
 	}
+	fmt.Println(time.Since(before))
 	fmt.Println(allMatched)
 }
