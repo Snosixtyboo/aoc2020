@@ -38,9 +38,10 @@ func createRule(id2Rule map[int]Rule, id int) {
 	id2Rule[id] = updatedRule
 }
 
-func verify(id2Rule map[int]Rule, text []byte, stack []int, depth int) bool {
+func verify(id2Rule map[int]Rule, text []byte, stack []int, upLink chan<- bool, depth int) {
 	if len(stack) == 0 {
-		return false
+		upLink <- false
+		return
 	}
 
 	ruleID := stack[0]
@@ -51,22 +52,31 @@ func verify(id2Rule map[int]Rule, text []byte, stack []int, depth int) bool {
 		if strings.HasPrefix(string(text), rule.raw) {
 			text = text[len(rule.raw):]
 			if len(stack) == 0 && len(text) == 0 { // perfect parsed
-				return true
+				upLink <- true
+				return
 			}
-			return verify(id2Rule, text, stack, depth+1)
+			verify(id2Rule, text, stack, upLink, depth+1)
+			return
 		}
-		return false
+		upLink <- false
+		return
 	}
 
+	downLink := make(chan bool)
 	for _, opt := range rule.options {
 		newStack := make([]int, len(opt))
 		copy(newStack, opt)
 		newStack = append(newStack, stack...)
-		if verify(id2Rule, text, newStack, depth+1) {
-			return true
+		go verify(id2Rule, text, newStack, downLink, depth+1)
+	}
+
+	result := false
+	for range rule.options {
+		if <-downLink {
+			result = true
 		}
 	}
-	return false
+	upLink <- result
 }
 
 func main() {
@@ -97,8 +107,12 @@ func main() {
 	allMatched := 0
 	for ; l < len(lines); l++ {
 		line := lines[l]
-		if len(line) > 0 && verify(id2Rule, []byte(line), id2Rule[0].options[0], 0) {
-			allMatched++
+		if len(line) > 0 {
+			topChannel := make(chan bool, 1)
+			verify(id2Rule, []byte(line), id2Rule[0].options[0], topChannel, 0)
+			if <-topChannel {
+				allMatched++
+			}
 		}
 	}
 	fmt.Println(allMatched)
