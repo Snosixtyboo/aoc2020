@@ -73,7 +73,7 @@ func verify(id2Rule map[int]Rule, text []byte, stack []int, depth int) bool {
 func main() {
 	var fileName string
 	var version2 bool
-	flag.StringVar(&fileName, "file", "data/in18.txt", "Input file to use")
+	flag.StringVar(&fileName, "file", "data/in19.txt", "Input file to use")
 	flag.BoolVar(&version2, "v2", false, "Use task2 version")
 	flag.Parse()
 
