@@ -145,6 +145,97 @@ func fillGrid(id int, x, y int) {
 	}
 }
 
+func countWaves(refPiece int, gridDim int) int {
+	pieceDim := pieces[refPiece].dim
+	imgDim := gridDim * (pieceDim - 2)
+	outImg := make([][]byte, imgDim)
+	for y := 0; y < gridDim; y++ {
+		for ty := 1; ty < pieces[refPiece].dim-1; ty++ {
+			outImg[y*(pieceDim-2)+ty-1] = make([]byte, imgDim)
+			for x := 0; x < gridDim; x++ {
+				for tx := 1; tx < pieces[refPiece].dim-1; tx++ {
+					outImg[y*(pieceDim-2)+ty-1][x*(pieceDim-2)+tx-1] = pieces[grid[y][x]].content[ty][tx]
+				}
+			}
+		}
+	}
+
+	monsterText := []string{
+		"                  # ",
+		"#    ##    ##    ###",
+		" #  #  #  #  #  #   ",
+	}
+
+	allMonsters := 0
+	for f := 0; f < 2 && allMonsters == 0; f++ {
+		for r := 0; r < 4 && allMonsters == 0; r++ {
+			checkImg := outImg
+			if f == 1 {
+				checkImg = flipTileH(imgDim, checkImg)
+			}
+			for y := 0; y < imgDim-len(monsterText); y++ {
+				for x := 0; x < imgDim-len(monsterText[0]); x++ {
+					present := true
+					for my := 0; my < len(monsterText); my++ {
+						for mx := 0; mx < len(monsterText[0]); mx++ {
+							if monsterText[my][mx] == '#' && checkImg[y+my][x+mx] != '#' {
+								present = false
+								break
+							}
+						}
+					}
+					if present {
+						allMonsters++
+					}
+				}
+			}
+			outImg = rotateTile(imgDim, outImg)
+		}
+	}
+	waveCount := 0
+	for y := 0; y < imgDim; y++ {
+		waveCount += strings.Count(string(outImg[y]), "#")
+	}
+	wavesInMonster := 0
+	for y := 0; y < len(monsterText); y++ {
+		wavesInMonster += strings.Count(monsterText[y], "#")
+	}
+	return waveCount - wavesInMonster*allMonsters
+}
+
+func prepareRefPiece() int {
+	for key, ids := range border2Tile {
+		if len(ids) == 1 {
+			for id := range ids {
+				p := pieces[id]
+				for i, b := range p.border {
+					if key == border2Hash(b, p.dim) {
+						p.unmatched[i] = true
+					}
+				}
+				p.numUnmatched++
+				pieces[id] = p
+			}
+		}
+	}
+
+	refPiece := -1
+	for i, p := range pieces {
+		if p.numUnmatched == 2 {
+			refPiece = i
+			break
+		}
+	}
+	for rotation := 0; rotation < 4; rotation++ {
+		if !pieces[refPiece].unmatched[1] && !pieces[refPiece].unmatched[2] {
+			break
+		}
+		rotatePiece(refPiece)
+	}
+
+	return refPiece
+}
+
 func main() {
 	var fileName string
 	flag.StringVar(&fileName, "file", "data/in20.txt", "Input file to use")
@@ -196,91 +287,11 @@ func main() {
 		}
 	}
 
-	for key, ids := range border2Tile {
-		if len(ids) == 1 {
-			for id := range ids {
-				p := pieces[id]
-				for i, b := range p.border {
-					if key == border2Hash(b, p.dim) {
-						p.unmatched[i] = true
-					}
-				}
-				p.numUnmatched++
-				pieces[id] = p
-			}
-		}
-	}
+	refPiece := prepareRefPiece()
 
-	refPiece := -1
-	for i, p := range pieces {
-		if p.numUnmatched == 2 {
-			refPiece = i
-			break
-		}
-	}
-
-	for rotation := 0; rotation < 4; rotation++ {
-		if !pieces[refPiece].unmatched[1] && !pieces[refPiece].unmatched[2] {
-			break
-		}
-		rotatePiece(refPiece)
-	}
 	fillGrid(refPiece, 0, 0)
 
-	pieceDim := pieces[refPiece].dim
-	imgDim := gridDim * (pieceDim - 2)
-	outImg := make([][]byte, imgDim)
-	for y := 0; y < gridDim; y++ {
-		for ty := 1; ty < pieces[refPiece].dim-1; ty++ {
-			outImg[y*(pieceDim-2)+ty-1] = make([]byte, imgDim)
-			for x := 0; x < gridDim; x++ {
-				for tx := 1; tx < pieces[refPiece].dim-1; tx++ {
-					outImg[y*(pieceDim-2)+ty-1][x*(pieceDim-2)+tx-1] = pieces[grid[y][x]].content[ty][tx]
-				}
-			}
-		}
-	}
+	waveCount := countWaves(refPiece, gridDim)
 
-	monsterText := []string{
-		"                  # ",
-		"#    ##    ##    ###",
-		" #  #  #  #  #  #   ",
-	}
-
-	allMonsters := 0
-	for f := 0; f < 2 && allMonsters == 0; f++ {
-		for r := 0; r < 4 && allMonsters == 0; r++ {
-			checkImg := outImg
-			if f > 0 {
-				checkImg = flipTileH(imgDim, checkImg)
-			}
-			for y := 0; y < imgDim-len(monsterText); y++ {
-				for x := 0; x < imgDim-len(monsterText[0]); x++ {
-					present := true
-					for my := 0; my < len(monsterText); my++ {
-						for mx := 0; mx < len(monsterText[0]); mx++ {
-							if monsterText[my][mx] == '#' && checkImg[y+my][x+mx] != '#' {
-								present = false
-								break
-							}
-						}
-					}
-					if present {
-						allMonsters++
-					}
-				}
-			}
-			outImg = rotateTile(imgDim, outImg)
-		}
-	}
-	wavesInMonster := 0
-	waveCount := 0
-
-	for y := 0; y < imgDim; y++ {
-		waveCount += strings.Count(string(outImg[y]), "#")
-	}
-	for y := 0; y < len(monsterText); y++ {
-		wavesInMonster += strings.Count(monsterText[y], "#")
-	}
-	fmt.Println(waveCount - wavesInMonster*allMonsters)
+	fmt.Println(waveCount)
 }
