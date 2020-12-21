@@ -10,26 +10,9 @@ import (
 	"strings"
 )
 
-var all2Ing = make(map[string]map[string]bool)
-var ingCount = make(map[string]int)
-var ing2All = make(map[string]string)
-
-type WordPair struct {
-	native  string
-	foreign string
-}
-
-type Dictionary []WordPair
-
-func (wp Dictionary) Len() int {
-	return len(wp)
-}
-func (wp Dictionary) Less(i, j int) bool {
-	return wp[i].native < wp[j].native
-}
-func (wp Dictionary) Swap(i, j int) {
-	wp[i], wp[j] = wp[j], wp[i]
-}
+var allergen2Ingredient = make(map[string]map[string]bool)
+var ingredient2Allergen = make(map[string]string)
+var ingredientCounts = make(map[string]int)
 
 func main() {
 	var fileName string
@@ -47,7 +30,7 @@ func main() {
 		allergens := strings.Split(strings.Replace(regResult[2], ",", "", -1), " ")
 
 		for _, ing := range ingredients {
-			ingCount[ing]++
+			ingredientCounts[ing]++
 		}
 
 		for _, allergen := range allergens {
@@ -55,11 +38,10 @@ func main() {
 			for _, ing := range ingredients {
 				compMap[ing] = true
 			}
-			if all2Ing[allergen] == nil {
-				all2Ing[allergen] = compMap
-				continue
+			if allergen2Ingredient[allergen] == nil {
+				allergen2Ingredient[allergen] = compMap
 			}
-			refMap := all2Ing[allergen]
+			refMap := allergen2Ingredient[allergen]
 			for r := range refMap {
 				if _, ok := compMap[r]; !ok {
 					delete(refMap, r)
@@ -74,15 +56,15 @@ func main() {
 	var newSingles []string
 	for len(singles) > 0 {
 		for _, s := range singles {
-			for v := range all2Ing[s] {
-				ing2All[v] = s
-				for m := range all2Ing {
+			for v := range allergen2Ingredient[s] {
+				ingredient2Allergen[v] = s
+				for m := range allergen2Ingredient {
 					if m == s {
 						continue
 					}
-					if _, ok := all2Ing[m][v]; ok {
-						delete(all2Ing[m], v)
-						if len(all2Ing[m]) == 1 {
+					if _, ok := allergen2Ingredient[m][v]; ok {
+						delete(allergen2Ingredient[m], v)
+						if len(allergen2Ingredient[m]) == 1 {
 							newSingles = append(newSingles, m)
 						}
 					}
@@ -93,24 +75,17 @@ func main() {
 	}
 
 	sumNonAllergens := 0
-	for ing, count := range ingCount {
-		if _, yes := ing2All[ing]; !yes {
+	for ing, count := range ingredientCounts {
+		if _, yes := ingredient2Allergen[ing]; !yes {
 			sumNonAllergens += count
 		}
 	}
 	fmt.Println("Appearances of non-allergens:", sumNonAllergens)
 
-	var dict Dictionary
-	for k, v := range ing2All {
-		dict = append(dict, WordPair{native: v, foreign: k})
+	var dangerous []string
+	for k := range ingredient2Allergen {
+		dangerous = append(dangerous, k)
 	}
-	sort.Sort(dict)
-
-	fmt.Print("Dangerous ingredient list: ")
-	for i, entry := range dict {
-		fmt.Printf("%s", entry.foreign)
-		if i < len(dict)-1 {
-			fmt.Printf(",")
-		}
-	}
+	sort.Slice(dangerous, func(i, j int) bool { return ingredient2Allergen[dangerous[i]] < ingredient2Allergen[dangerous[j]] })
+	fmt.Print("Dangerous ingredient list:", strings.Join(dangerous, ","))
 }
