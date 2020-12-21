@@ -166,31 +166,29 @@ func countWaves(refPiece int, gridDim int) int {
 		" #  #  #  #  #  #   ",
 	}
 
-	allMonsters := 0
-	for f := 0; f < 2 && allMonsters == 0; f++ {
-		for r := 0; r < 4 && allMonsters == 0; r++ {
-			checkImg := outImg
-			if f == 1 {
-				checkImg = flipTileH(imgDim, checkImg)
-			}
-			for y := 0; y < imgDim-len(monsterText); y++ {
-				for x := 0; x < imgDim-len(monsterText[0]); x++ {
-					present := true
-					for my := 0; my < len(monsterText); my++ {
-						for mx := 0; mx < len(monsterText[0]); mx++ {
-							if monsterText[my][mx] == '#' && checkImg[y+my][x+mx] != '#' {
-								present = false
-								break
-							}
+	numMonsters := 0
+	for cfg := 0; cfg < 8 && numMonsters == 0; cfg++ {
+		checkImg := outImg
+		if cfg > 4 {
+			checkImg = flipTileH(imgDim, checkImg)
+		}
+		for y := 0; y < imgDim-len(monsterText); y++ {
+			for x := 0; x < imgDim-len(monsterText[0]); x++ {
+				present := true
+				for my := 0; my < len(monsterText); my++ {
+					for mx := 0; mx < len(monsterText[0]); mx++ {
+						if monsterText[my][mx] == '#' && checkImg[y+my][x+mx] != '#' {
+							present = false
+							break
 						}
 					}
-					if present {
-						allMonsters++
-					}
+				}
+				if present {
+					numMonsters++
 				}
 			}
-			outImg = rotateTile(imgDim, outImg)
 		}
+		outImg = rotateTile(imgDim, outImg)
 	}
 	waveCount := 0
 	for y := 0; y < imgDim; y++ {
@@ -200,7 +198,7 @@ func countWaves(refPiece int, gridDim int) int {
 	for y := 0; y < len(monsterText); y++ {
 		wavesInMonster += strings.Count(monsterText[y], "#")
 	}
-	return waveCount - wavesInMonster*allMonsters
+	return waveCount - wavesInMonster*numMonsters
 }
 
 func prepareRefPiece() int {
