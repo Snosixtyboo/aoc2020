@@ -18,7 +18,6 @@ type Piece struct {
 	dim          int
 	content      [][]byte
 	border       [4]uint
-	unmatched    [4]bool
 	numUnmatched int
 }
 
@@ -26,8 +25,7 @@ func reverseBorder(border uint, dim int) uint {
 	return bits.Reverse(border) >> (64 - dim)
 }
 
-func border2Hash(border uint, dim int) uint {
-	hash := border
+func border2Hash(hash uint, dim int) uint {
 	testHash := reverseBorder(hash, dim)
 	if testHash < hash {
 		hash = testHash
@@ -72,8 +70,9 @@ func flipPieceH(p int) {
 	piece := pieces[p]
 	piece.content = flipTileH(piece.dim, piece.content)
 	piece.border[1], piece.border[3] = piece.border[3], piece.border[1]
-	piece.unmatched[1], piece.unmatched[3] = piece.unmatched[3], piece.unmatched[1]
-	piece.border[0], piece.border[2] = reverseBorder(piece.border[0], piece.dim), reverseBorder(piece.border[2], piece.dim)
+	for i := 0; i < 4; i++ {
+		piece.border[i] = reverseBorder(piece.border[i], piece.dim)
+	}
 	pieces[p] = piece
 }
 
@@ -81,55 +80,64 @@ func flipPieceV(p int) {
 	piece := pieces[p]
 	piece.content = flipTileV(piece.dim, piece.content)
 	piece.border[0], piece.border[2] = piece.border[2], piece.border[0]
-	piece.unmatched[0], piece.unmatched[2] = piece.unmatched[2], piece.unmatched[0]
-	piece.border[1], piece.border[3] = reverseBorder(piece.border[1], piece.dim), reverseBorder(piece.border[3], piece.dim)
+	for i := 0; i < 4; i++ {
+		piece.border[i] = reverseBorder(piece.border[i], piece.dim)
+	}
 	pieces[p] = piece
 }
 
 func rotatePiece(p int) {
 	piece := pieces[p]
 	piece.content = rotateTile(piece.dim, piece.content)
-
-	var oldB [4]uint
-	var oldM [4]bool
-	for i := 0; i < 4; i++ {
-		oldB[i] = piece.border[i]
-		oldM[i] = piece.unmatched[i]
-	}
-	for i := 0; i < 4; i++ {
-		piece.border[i] = oldB[(i+1)%4]
-		if i == 1 || i == 3 {
-			piece.border[i] = reverseBorder(piece.border[i], piece.dim)
-		}
-		piece.unmatched[i] = oldM[(i+1)%4]
-	}
+	piece.border[0], piece.border[1], piece.border[2], piece.border[3] = piece.border[1], piece.border[2], piece.border[3], piece.border[0]
 	pieces[p] = piece
+}
+
+func prepareRefPiece() int {
+	refPiece := -1
+	for _, ids := range border2Tile {
+		if len(ids) == 1 {
+			for id := range ids {
+				p := pieces[id]
+				p.numUnmatched++
+				if p.numUnmatched == 2 {
+					refPiece = id
+					break
+				}
+				pieces[id] = p
+			}
+		}
+	}
+	for len(border2Tile[border2Hash(pieces[refPiece].border[1], pieces[refPiece].dim)]) < 2 ||
+		len(border2Tile[border2Hash(pieces[refPiece].border[2], pieces[refPiece].dim)]) < 2 {
+		rotatePiece(refPiece)
+	}
+	return refPiece
 }
 
 func fillGrid(id int, x, y int) {
 	if grid[y][x] != 0 {
 		return
 	}
-
 	grid[y][x] = id
-	piece := pieces[id] // left and down
+	piece := pieces[id]
+	// right and down
 	for c := 1; c <= 2; c++ {
+		opposite := (c + 2) % 4
 		code := piece.border[c]
 		hash := border2Hash(code, piece.dim)
-		results := border2Tile[hash]
 
-		if len(results) > 1 {
+		if len(border2Tile[hash]) > 1 {
 			var other int
-			for entry := range results {
+			for entry := range border2Tile[hash] {
 				if entry != id {
 					other = entry
-					break
 				}
 			}
-			for border2Hash(pieces[other].border[(c+2)%4], pieces[other].dim) != hash {
+			for border2Hash(pieces[other].border[opposite], pieces[other].dim) != hash {
 				rotatePiece(other)
 			}
-			if pieces[other].border[(c+2)%4] != code {
+			if pieces[other].border[opposite] == code {
 				if c == 1 {
 					flipPieceV(other)
 				} else {
@@ -145,15 +153,14 @@ func fillGrid(id int, x, y int) {
 	}
 }
 
-func countWaves(refPiece int, gridDim int) int {
-	pieceDim := pieces[refPiece].dim
+func countWaves(pieceDim int, gridDim int) int {
 	imgDim := gridDim * (pieceDim - 2)
 	outImg := make([][]byte, imgDim)
 	for y := 0; y < gridDim; y++ {
-		for ty := 1; ty < pieces[refPiece].dim-1; ty++ {
+		for ty := 1; ty < pieceDim-1; ty++ {
 			outImg[y*(pieceDim-2)+ty-1] = make([]byte, imgDim)
 			for x := 0; x < gridDim; x++ {
-				for tx := 1; tx < pieces[refPiece].dim-1; tx++ {
+				for tx := 1; tx < pieceDim-1; tx++ {
 					outImg[y*(pieceDim-2)+ty-1][x*(pieceDim-2)+tx-1] = pieces[grid[y][x]].content[ty][tx]
 				}
 			}
@@ -163,8 +170,7 @@ func countWaves(refPiece int, gridDim int) int {
 	monsterText := []string{
 		"                  # ",
 		"#    ##    ##    ###",
-		" #  #  #  #  #  #   ",
-	}
+		" #  #  #  #  #  #   "}
 
 	numMonsters := 0
 	for cfg := 0; cfg < 8 && numMonsters == 0; cfg++ {
@@ -173,72 +179,34 @@ func countWaves(refPiece int, gridDim int) int {
 			checkImg = flipTileH(imgDim, checkImg)
 		}
 		for y := 0; y < imgDim-len(monsterText); y++ {
+		NewMonster:
 			for x := 0; x < imgDim-len(monsterText[0]); x++ {
-				present := true
 				for my := 0; my < len(monsterText); my++ {
 					for mx := 0; mx < len(monsterText[0]); mx++ {
 						if monsterText[my][mx] == '#' && checkImg[y+my][x+mx] != '#' {
-							present = false
-							break
+							continue NewMonster
 						}
 					}
 				}
-				if present {
-					numMonsters++
-				}
+				numMonsters++
 			}
 		}
 		outImg = rotateTile(imgDim, outImg)
 	}
-	waveCount := 0
+	wavesInImage, wavesInMonster := 0, 0
 	for y := 0; y < imgDim; y++ {
-		waveCount += strings.Count(string(outImg[y]), "#")
+		wavesInImage += strings.Count(string(outImg[y]), "#")
 	}
-	wavesInMonster := 0
 	for y := 0; y < len(monsterText); y++ {
 		wavesInMonster += strings.Count(monsterText[y], "#")
 	}
-	return waveCount - wavesInMonster*numMonsters
-}
-
-func prepareRefPiece() int {
-	for key, ids := range border2Tile {
-		if len(ids) == 1 {
-			for id := range ids {
-				p := pieces[id]
-				for i, b := range p.border {
-					if key == border2Hash(b, p.dim) {
-						p.unmatched[i] = true
-					}
-				}
-				p.numUnmatched++
-				pieces[id] = p
-			}
-		}
-	}
-
-	refPiece := -1
-	for i, p := range pieces {
-		if p.numUnmatched == 2 {
-			refPiece = i
-			break
-		}
-	}
-	for rotation := 0; rotation < 4; rotation++ {
-		if !pieces[refPiece].unmatched[1] && !pieces[refPiece].unmatched[2] {
-			break
-		}
-		rotatePiece(refPiece)
-	}
-
-	return refPiece
+	return wavesInImage - wavesInMonster*numMonsters
 }
 
 func main() {
 	var fileName string
 	flag.StringVar(&fileName, "file", "data/in20.txt", "Input file to use")
 	flag.Parse()
-
 	content, _ := ioutil.ReadFile(fileName)
 	tiles := bytes.Split(content, []byte("\n\n"))
 
@@ -248,29 +216,21 @@ func main() {
 		grid[g] = make([]int, gridDim)
 	}
 
+	var id int
 	for _, tile := range tiles {
 		lines := bytes.Split(tile, []byte("\n"))
-
+		fmt.Fscanf(bytes.NewReader(lines[0]), "Tile %d:", &id)
 		piece := Piece{dim: len(lines[1]), content: lines[1:]}
-		rd := bytes.NewReader(lines[0])
-		var id int
-		fmt.Fscanf(rd, "Tile %d:", &id)
 
+		x, y, dx, dy := 0, 0, 1, 0
 		for i := 0; i < 4; i++ {
-			down := i % 2
-			off := 0
-			if i == 1 || i == 2 {
-				off = 1
-			}
-			x, y := down*off*(piece.dim-1), (down^1)*off*(piece.dim-1)
-			piece.border[i] = 0
 			for r := 0; r < piece.dim; r++ {
 				if piece.content[y][x] == '#' {
 					piece.border[i] |= (1 << r)
 				}
-				y += down
-				x += down ^ 1
+				x, y = x+dx, y+dy
 			}
+			x, y, dx, dy = x-dx, y-dy, -dy, dx
 		}
 		pieces[id] = piece
 	}
@@ -285,11 +245,6 @@ func main() {
 		}
 	}
 
-	refPiece := prepareRefPiece()
-
-	fillGrid(refPiece, 0, 0)
-
-	waveCount := countWaves(refPiece, gridDim)
-
-	fmt.Println(waveCount)
+	fillGrid(prepareRefPiece(), 0, 0)
+	fmt.Println(countWaves(pieces[id].dim, gridDim))
 }
