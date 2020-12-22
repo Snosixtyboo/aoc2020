@@ -121,7 +121,7 @@ func fillGrid(id int, x, y int) {
 	}
 	grid[y][x] = id
 	piece := pieces[id]
-	// right and down
+	// We start with tile in top left, search matches on right and bottom
 	for c := 1; c <= 2; c++ {
 		opposite := (c + 2) % 4
 		code := piece.border[c]
