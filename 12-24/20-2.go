@@ -126,7 +126,7 @@ func fillGrid(id int, x, y int) {
 		opposite := (c + 2) % 4
 		code := piece.border[c]
 		hash := border2Hash(code, piece.dim)
-
+		// Find tile matching border code, transform to fit
 		if len(border2Tile[hash]) > 1 {
 			var other int
 			for entry := range border2Tile[hash] {
@@ -166,12 +166,12 @@ func countWaves(pieceDim int, gridDim int) int {
 			}
 		}
 	}
-
+	// Monster to look for
 	monsterText := []string{
 		"                  # ",
 		"#    ##    ##    ###",
 		" #  #  #  #  #  #   "}
-
+	// Iterate over image and count occurrences
 	numMonsters := 0
 	for cfg := 0; cfg < 8 && numMonsters == 0; cfg++ {
 		checkImg := outImg
@@ -209,19 +209,19 @@ func main() {
 	flag.Parse()
 	content, _ := ioutil.ReadFile(fileName)
 	tiles := bytes.Split(content, []byte("\n\n"))
-
+	// Create grid
 	gridDim := int(math.Sqrt(float64(len(tiles))))
 	grid = make([][]int, gridDim)
 	for g := 0; g < gridDim; g++ {
 		grid[g] = make([]int, gridDim)
 	}
-
+	// Scan tiles and compute border codes
 	var id int
 	for _, tile := range tiles {
 		lines := bytes.Split(tile, []byte("\n"))
 		fmt.Fscanf(bytes.NewReader(lines[0]), "Tile %d:", &id)
 		piece := Piece{dim: len(lines[1]), content: lines[1:]}
-
+		// Compute binary border codes (counter clock-wise)
 		x, y, dx, dy := 0, 0, 1, 0
 		for i := 0; i < 4; i++ {
 			for r := 0; r < piece.dim; r++ {
@@ -234,7 +234,7 @@ func main() {
 		}
 		pieces[id] = piece
 	}
-
+	// Convert border code to transform invariant hash and find matches
 	for id, p := range pieces {
 		for _, border := range p.border {
 			hash := border2Hash(border, p.dim)
@@ -244,7 +244,7 @@ func main() {
 			border2Tile[hash][id] = true
 		}
 	}
-
+	// Find starting piece, fill grid and count waves and monsters
 	fillGrid(prepareRefPiece(), 0, 0)
 	fmt.Println(countWaves(pieces[id].dim, gridDim))
 }
